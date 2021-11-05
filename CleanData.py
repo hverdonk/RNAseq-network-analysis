@@ -1,6 +1,7 @@
 import pandas as pd
 
-class CleanData(pd.DataFrame):
+# pd.DataFrame
+class CleanData():
     '''
     A special type of Pandas dataframe.
 
@@ -11,8 +12,7 @@ class CleanData(pd.DataFrame):
         FILENAMES: a list of files containing the genes we want to analyze.
         TODO: improve description
         '''
-        pd.DataFrame.__init__(self)
-        self.dataframe = __extractdata__(filenames)
+        self.df = __extractdata__(filenames)
 
 
     def get_overexpressed(self):
@@ -35,21 +35,13 @@ def __extractdata__(files):
     for file in files:
         try:
             frame = pd.read_csv(file, sep=' ', header=0, index_col=0)
-            # Genes with low count numbers and outlier samples have a padj of "NA"
-
-            # The genes with NA are the ones DESeq2 has filtered out. From DESeq2 manual: “The results function of the DESeq2 package 
-            # performs independent filtering by default using the mean of normalized counts as a filter statistic. A threshold on the 
-            # filter statistic is found which optimizes the number of adjusted p values lower than a [specified] significance level”.
-
-            # I used the default False Discovery Rate (FDR) cutoff of 0.1 as the specified significance level for thresholding
-            # adjusted p-values in the independent filtering step.
-            frame.dropna(subset=['padj'], inplace=True)
+            # Genes with low count numbers and outlier samples are prefiltered by DESeq2 and have a padj of "NA"
             frame.reset_index(inplace=True)
             frame = frame.rename(columns = {'index':'geneNames'})
 
             # TODO: look up the default p_adj threshold for DESeq2
 
-            # find overexpressed and underexpressed genes for each comparison
+            # find differentially expressed genes for each comparison
             # sort by lfc, keep only stuff above upper lfc_thr=-1.0 and below lower lfc_thr=1.0
             frame = frame[(frame['log2FoldChange'] < -1.0) | (frame['log2FoldChange'] > 1.0)]
             # sort by padj (lowest to highest), keep only stuff above pv_thr=0.05
@@ -71,21 +63,32 @@ def __extractdata__(files):
             print(Exception, e)
             print(file)
 
-    # if a gene is an outlier at multiple time points, only keep the first entry in the dataframe
     # TODO: should I keep duplicate with most significant padj value regardless of timepoint? Or just 
-    # stick to the first timepoint for consistency?
+    # stick to the first timepoint for consistency? Will I even need to drop duplicates in the final data, 
+    # or will each timepoint be its own thing?
 
-    print(DEgenes.head())
     # check if duplicates are overexpressed at one timepoint and underexpressed at another
-    # print(DEgenes[DEgenes.duplicated(subset='geneNames', keep=False)])
+    # print("Duplicates:")
+    # temp = DEgenes[DEgenes.duplicated(subset='geneNames', keep=False)]
+    # grouped = temp.groupby('geneNames')
 
+    # for name,group in grouped:
+    #     print(name)
+    #     print(group)
+
+    # TODO: at least one gene is overexpressed at one timepoint and underexpressed at another. Even for genes with similar trends,
+    # how should I deal with different l2fc or different padj values? Which gene should I keep, if any?
+    # PERHAPS: keep duplicate with most significant padj value 
+        # remove all dups from one df, keep all dups in another frame for processing. Then at the end, merge frames together
+        # write helper function to handle dups df - keep only gene with highest padj value
+    '''
+    Gm22711
+        geneNames   baseMean  log2FoldChange     lfcSE      stat    pvalue      padj    index expressionChange
+    122   Gm22711  17.088073        1.729882  0.597521  2.829907  0.004656  0.032593  13156.0    overexpressed
+    37    Gm22711  17.088073       -1.949715  0.550194 -3.456516  0.000547  0.035195  13156.0   underexpressed
+    '''
+
+    # if a gene is an outlier at multiple time points, only keep the first entry in the dataframe
     DEgenes.drop_duplicates(subset='geneNames', inplace=True)
+    DEgenes.reset_index(inplace=True)
     return DEgenes
-
-
-
-
-filepaths = ['/home/hannah/Dropbox/Temple/kulathinal-rotation/DE_results/FCGXXM-vs-FCGXXF-105-diffexp']
-
-XXMvsXXF_DEGs = CleanData(filepaths)
-print(XXMvsXXF_DEGs.head())
