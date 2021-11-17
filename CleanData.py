@@ -3,9 +3,7 @@ import pandas as pd
 # pd.DataDEgenes
 class CleanData():
     '''
-    A special type of Pandas dataDEgenes.
-
-    NOTE: for timepoint-based analyses, make separate CleanData objects for each timepoint's comparison
+    A special type of Pandas dataframe containing differential gene expression data.
     '''
     def __init__(self, filename='', dataframe=None):
         '''
@@ -43,6 +41,12 @@ class CleanData():
         Returns a new CleanData object where object.df is a copy of self.df containing only underexpressed genes
         '''
         return CleanData(self.df[self.df['expressionChange']=='underexpressed'])
+
+    def reduce_data(self, *args):
+        '''
+        Returns a subset of self.dataframe containing only the columns in ARGS.
+        '''
+        return self.df[list(args)]
         
 def __extractdata__(file, pthresh=0.05, logthresh=1.0):
     '''
